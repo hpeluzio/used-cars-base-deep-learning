@@ -1,6 +1,9 @@
 import pandas as pd;
 from keras.models import Sequential
 from keras.layers import Dense
+from sklearn.model_selection import cross_val_score
+from keras.wrappers.scikit_learn import KerasRegressor
+from sklearn.model_selection import GridSearchCV
 
 base = pd.read_csv('autos.csv', encoding = 'ISO-8859-1')
 
@@ -73,16 +76,33 @@ predictors[:,10] = labelencoder_predictors.fit_transform(predictors[:,10])
 onehotencorder = ColumnTransformer(transformers=[("OneHot", OneHotEncoder(), [0,1,3,5,8,9,10])],remainder='passthrough')
 predictors = onehotencorder.fit_transform(predictors).toarray()
 
-# Regressor
-regressor = Sequential()
-# 316(entradas) + 1(saida) / 2
-# Queremos prever uma saida - (316+1) / 2 = 158.5 
-regressor.add(Dense(units = 158, activation = 'relu', input_dim = 316)) 
-regressor.add(Dense(units = 158, activation = 'relu')) 
-regressor.add(Dense(units = 1, activation = 'linear'))
-regressor.compile(loss = 'mean_absolute_error', optimizer = 'adam',
-                  metrics = ['mean_absolute_error'])
-regressor.fit(predictors, real_price, batch_size = 300, epochs = 100)
+def create_network():
+    regressor = Sequential()
+    # 316(entradas) + 1(saida) / 2
+    # Queremos prever uma saida - (316+1) / 2 = 158.5 
+    regressor.add(Dense(units = 158, activation = 'relu', input_dim = 316)) 
+    regressor.add(Dense(units = 158, activation = 'relu')) 
+    regressor.add(Dense(units = 1, activation = 'linear'))
+    regressor.compile(loss = 'mean_absolute_error', optimizer = 'adam',
+                      metrics = ['mean_absolute_error'])
+    return regressor
 
+regressor = KerasRegressor(build_fn = create_network, 
+                           epochs = 100,
+                           batch_size = 300)
 
+# resuts = cross_val_score(estimator = regressor, 
+#                         X = predictors, y = real_price,
+#                         cv = 10, scoring = 'mean_absolute_error')
 
+#mean = results.mean()
+#deviation = results.std()
+parameters = {'loss': ['mean_squared_error', 'mean_absolute_error',
+                       'mean_absolute_percentage_error', 'mean_squared_logarithmic_error',
+                       'squared_hinge']}
+grid_search = GridSearchCV(estimator = regressor, 
+                           param_grid = parameters, 
+                           cv = 10)
+
+best_parameters = grid_search.best_params_
+best_precision = grid_search.best_score_
