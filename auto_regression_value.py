@@ -1,4 +1,7 @@
 import pandas as pd;
+from keras.models import Sequential
+from keras.layers import Dense
+
 base = pd.read_csv('autos.csv', encoding = 'ISO-8859-1')
 
 # Pre-processing
@@ -71,4 +74,17 @@ predictors[:,10] = labelencoder_predictors.fit_transform(predictors[:,10])
 onehotencorder = ColumnTransformer(transformers=[("OneHot", OneHotEncoder(), [0,1,3,5,8,9,10])],remainder='passthrough')
 predictors = onehotencorder.fit_transform(predictors).toarray()
 
-predictors[0]
+#predictors[0]
+
+regressor = Sequential()
+# 316(entradas) + 1(saida) / 2
+# Queremos prever uma saida - (316+1) / 2 = 158.5 
+regressor.add(Dense(units = 158, activation = 'relu', input_dim = 316)) 
+regressor.add(Dense(units = 158, activation = 'relu')) 
+regressor.add(Dense(units = 1, activation = 'linear'))
+regressor.compile(loss = 'mean_absolute_error', optimizer = 'adam',
+                  metrics = ['mean_absolute_error'])
+regressor.fit(predictors, real_price, batch_size = 300, epochs = 100)
+
+
+
